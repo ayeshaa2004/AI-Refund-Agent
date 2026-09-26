@@ -1,69 +1,189 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useRef, useState } from "react";
+
+type Customer = {
+  customerId: string;
+  customerName: string;
+  orderId: string;
+  item: string;
+};
+
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export default function ChatPage() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerId, setCustomerId] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/customers")
+      .then((res) => res.json())
+      .then((data) => setCustomers(data.customers));
+  }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  async function sendMessage() {
+    if (!input.trim() || !customerId || loading) return;
+
+    const userMsg: Message = { role: "user", content: input };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId,
+          message: userMsg.content,
+          history: messages,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        setMessages([
+          ...newMessages,
+          { role: "assistant", content: `Error: ${data.error}` },
+        ]);
+      } else {
+        setMessages([
+          ...newMessages,
+          { role: "assistant", content: data.reply },
+        ]);
+      }
+    } catch {
+      setMessages([
+        ...newMessages,
+        {
+          role: "assistant",
+          content: "Something went wrong reaching the server.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen bg-paper flex justify-center px-4 py-10">
+      <div className="w-full max-w-2xl flex flex-col h-[calc(100vh-5rem)]">
+        {/* Header */}
+        <div className="mb-6">
+          <p className="text-xs tracking-[0.2em] uppercase text-gold font-mono mb-1">
+            Refund Desk
           </p>
+          <h1 className="font-display text-3xl text-ink">
+            AI Customer Support
+          </h1>
+          <div className="h-px bg-line mt-4" />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        {/* Customer selector */}
+        <div className="mb-5">
+          <label className="text-xs uppercase tracking-wide text-ink-muted font-mono block mb-1.5">
+            Logged in as
+          </label>
+          <select
+            className="w-full bg-white border border-line rounded-xl px-4 py-3 text-ink
+                       focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold
+                       transition"
+            value={customerId}
+            onChange={(e) => {
+              setCustomerId(e.target.value);
+              setMessages([]);
+            }}
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <option value="">-- select customer --</option>
+            {customers.map((c) => (
+              <option key={c.customerId} value={c.customerId}>
+                {c.customerName} — {c.item} ({c.orderId})
+              </option>
+            ))}
+          </select>
         </div>
-      </main>
-    </div>
+
+        {/* Chat window */}
+        <div
+          className="flex-1 overflow-y-auto rounded-2xl border border-line bg-white/70
+                     shadow-[0_1px_3px_rgba(31,35,32,0.06)] p-5 mb-5 space-y-4"
+        >
+          {messages.length === 0 && (
+            <div className="h-full flex items-center justify-center text-center">
+              <p className="text-ink-muted text-sm max-w-xs">
+                Select a customer above, then say something like{" "}
+                <span className="italic">
+                  &quot;I want a refund for my order&quot;
+                </span>
+                .
+              </p>
+            </div>
+          )}
+
+          {messages.map((m, i) => (
+            <div
+              key={i}
+              className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`rounded-2xl px-4 py-3 max-w-[80%] whitespace-pre-wrap text-[15px] leading-relaxed shadow-sm ${
+                  m.role === "user"
+                    ? "bg-ink text-paper rounded-br-md"
+                    : "bg-paper-dim text-ink border border-line rounded-bl-md"
+                }`}
+              >
+                {m.content}
+              </div>
+            </div>
+          ))}
+
+          {loading && (
+            <div className="flex items-center gap-2 text-ink-muted text-sm font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse [animation-delay:150ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse [animation-delay:300ms]" />
+              <span className="ml-1">agent is thinking</span>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input */}
+        <div className="flex gap-2">
+          <input
+            className="flex-1 bg-white border border-line rounded-full px-5 py-3 text-ink
+                       placeholder:text-ink-muted focus:outline-none focus:ring-2
+                       focus:ring-gold/40 focus:border-gold transition"
+            placeholder={
+              customerId ? "Type your message..." : "Select a customer first"
+            }
+            value={input}
+            disabled={!customerId || loading}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!customerId || loading}
+            className="bg-ink text-paper px-6 py-3 rounded-full font-medium
+                       hover:bg-ink/90 disabled:opacity-30 disabled:cursor-not-allowed transition"
+          >
+            Send
+          </button>
+        </div>
+      </div>
+    </main>
   );
 }
