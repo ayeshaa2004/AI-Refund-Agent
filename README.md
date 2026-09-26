@@ -196,4 +196,4 @@ address in a production version:
 
 ## Author
 
-Built by [Ayesha Aziz] for the Jobform Automator hiring assignment.
+Built by Ayesha Aziz for the Jobform Automator hiring assignment.
