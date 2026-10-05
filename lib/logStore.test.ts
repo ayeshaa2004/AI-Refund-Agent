@@ -6,13 +6,13 @@ describe("logStore", () => {
   it("starts empty", async () => {
     const { getLogs } = await import("./logStore");
 
-    expect(getLogs()).toEqual([]);
+    expect(await getLogs()).toEqual([]);
   });
 
   it("adds an entry with an auto-generated id and timestamp", async () => {
     const { addLog } = await import("./logStore");
 
-    const entry = addLog({
+    const entry = await addLog({
       customerId: "CUST-01",
       userMessage: "hi",
       reply: "hello, how can I help?",
@@ -28,14 +28,14 @@ describe("logStore", () => {
   it("increments the id on each subsequent entry", async () => {
     const { addLog } = await import("./logStore");
 
-    const first = addLog({
+    const first = await addLog({
       customerId: "CUST-01",
       userMessage: "a",
       reply: "b",
       trace: [],
     });
 
-    const second = addLog({
+    const second = await addLog({
       customerId: "CUST-01",
       userMessage: "c",
       reply: "d",
@@ -48,21 +48,21 @@ describe("logStore", () => {
   it("getLogs returns entries in insertion order", async () => {
     const { addLog, getLogs } = await import("./logStore");
 
-    addLog({
+    await addLog({
       customerId: "CUST-01",
       userMessage: "first",
       reply: "",
       trace: [],
     });
 
-    addLog({
+    await addLog({
       customerId: "CUST-01",
       userMessage: "second",
       reply: "",
       trace: [],
     });
 
-    const logs = getLogs();
+    const logs = await getLogs();
 
     expect(logs.map((l: { userMessage: string }) => l.userMessage)).toEqual([
       "first",

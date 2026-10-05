@@ -126,42 +126,49 @@ describe("checkRefundEligibility", () => {
 });
 
 describe("executeTool", () => {
-  it("returns order details for a known order", () => {
-    const result = executeTool("get_order_details", {
+  it("returns order details for a known order", async () => {
+    const result = (await executeTool("get_order_details", {
       orderId: "ORD-1001",
-    }) as {
+    })) as {
       orderId: string;
       item: string;
     };
+
     expect(result.orderId).toBe("ORD-1001");
     expect(result.item).toBeTruthy();
   });
 
-  it("returns an error for an unknown order id", () => {
-    const result = executeTool("get_order_details", {
+  it("returns an error for an unknown order id", async () => {
+    const result = (await executeTool("get_order_details", {
       orderId: "ORD-9999",
-    }) as {
+    })) as {
       error: string;
     };
+
     expect(result.error).toMatch(/no order found/i);
   });
 
-  it("returns eligible: true for the seeded defective-item order (ORD-1006)", () => {
-    const result = executeTool("check_refund_eligibility", {
+  it("returns eligible: true for the seeded defective-item order (ORD-1006)", async () => {
+    const result = (await executeTool("check_refund_eligibility", {
       orderId: "ORD-1006",
-    }) as { eligible: boolean };
+    })) as { eligible: boolean };
+
     expect(result.eligible).toBe(true);
   });
 
-  it("returns eligible: false for the seeded final-sale order (ORD-1003)", () => {
-    const result = executeTool("check_refund_eligibility", {
+  it("returns eligible: false for the seeded final-sale order (ORD-1003)", async () => {
+    const result = (await executeTool("check_refund_eligibility", {
       orderId: "ORD-1003",
-    }) as { eligible: boolean };
+    })) as { eligible: boolean };
+
     expect(result.eligible).toBe(false);
   });
 
-  it("returns an error for an unrecognized tool name", () => {
-    const result = executeTool("not_a_real_tool", {}) as { error: string };
+  it("returns an error for an unrecognized tool name", async () => {
+    const result = (await executeTool("not_a_real_tool", {})) as {
+      error: string;
+    };
+
     expect(result.error).toMatch(/unknown tool/i);
   });
 });
@@ -169,6 +176,7 @@ describe("executeTool", () => {
 beforeEach(() => {
   jest.resetModules();
 });
+
 describe("executeTool: approve_refund / deny_refund (isolated)", () => {
   beforeEach(() => {
     jest.resetModules();
@@ -178,15 +186,15 @@ describe("executeTool: approve_refund / deny_refund (isolated)", () => {
     const { executeTool: freshExecuteTool } = await import("./tools");
 
     // ORD-1009: standard, unused, delivered 2 days ago -- eligible.
-    const before = freshExecuteTool("get_order_details", {
+    const before = (await freshExecuteTool("get_order_details", {
       orderId: "ORD-1009",
-    }) as { refunded: boolean };
+    })) as { refunded: boolean };
 
     expect(before.refunded).toBe(false);
 
-    const approval = freshExecuteTool("approve_refund", {
+    const approval = (await freshExecuteTool("approve_refund", {
       orderId: "ORD-1009",
-    }) as {
+    })) as {
       status: string;
       orderId: string;
       refundAmount: number;
@@ -199,9 +207,9 @@ describe("executeTool: approve_refund / deny_refund (isolated)", () => {
 
     expect(approval.refundAmount).toBeGreaterThan(0);
 
-    const after = freshExecuteTool("get_order_details", {
+    const after = (await freshExecuteTool("get_order_details", {
       orderId: "ORD-1009",
-    }) as { refunded: boolean };
+    })) as { refunded: boolean };
 
     expect(after.refunded).toBe(true);
   });
@@ -209,9 +217,9 @@ describe("executeTool: approve_refund / deny_refund (isolated)", () => {
   it("refuses to approve an ineligible order", async () => {
     const { executeTool: freshExecuteTool } = await import("./tools");
 
-    const result = freshExecuteTool("approve_refund", {
+    const result = (await freshExecuteTool("approve_refund", {
       orderId: "ORD-1003",
-    }) as { error: string };
+    })) as { error: string };
 
     expect(result.error).toMatch(/not eligible/i);
   });
@@ -219,10 +227,10 @@ describe("executeTool: approve_refund / deny_refund (isolated)", () => {
   it("records a denial with its reason, without checking eligibility", async () => {
     const { executeTool: freshExecuteTool } = await import("./tools");
 
-    const result = freshExecuteTool("deny_refund", {
+    const result = (await freshExecuteTool("deny_refund", {
       orderId: "ORD-1002",
       reason: "Outside the return window.",
-    }) as {
+    })) as {
       status: string;
       orderId: string;
       reason: string;
