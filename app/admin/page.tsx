@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { TraceEntry } from "@/lib/agent";
 
 type LogEntry = {
-  id: number;
+  id: string;
   timestamp: string;
   customerId: string;
   userMessage: string;

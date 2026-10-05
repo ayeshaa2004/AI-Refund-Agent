@@ -55,7 +55,7 @@ export async function runAgent(
 ): Promise<{ reply: string; trace: TraceEntry[] }> {
   const trace: TraceEntry[] = [];
 
-  const orders = findOrdersByCustomerId(customerId);
+  const orders = await findOrdersByCustomerId(customerId);
   const orderSummary =
     orders.map((o) => `${o.orderId}: ${o.item} (₹${o.price})`).join(", ") ||
     "No orders found for this customer.";
@@ -99,7 +99,7 @@ Rules for how you must behave:
         const args = JSON.parse(call.function.arguments || "{}");
         trace.push({ type: "tool_call", tool: call.function.name, args });
 
-        const result = executeTool(call.function.name, args);
+        const result = await executeTool(call.function.name, args);
         trace.push({ type: "tool_result", tool: call.function.name, result });
 
         messages.push({

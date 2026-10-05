@@ -10,13 +10,13 @@ export async function POST(req: NextRequest) {
     if (!customerId || !message) {
       return NextResponse.json(
         { error: "customerId and message are required." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const { reply, trace } = await runAgent(customerId, message, history || []);
 
-    addLog({ customerId, userMessage: message, reply, trace });
+    await addLog({ customerId, userMessage: message, reply, trace });
 
     return NextResponse.json({ reply, trace });
   } catch (err: unknown) {

@@ -82,7 +82,6 @@ export default function ChatPage() {
     <main className="min-h-screen bg-paper flex justify-center px-4 py-10">
       <div className="w-full max-w-2xl flex flex-col h-[calc(100vh-5rem)]">
         {/* Header */}
-        {/* Header */}
         <div className="mb-6">
           <div className="flex items-start justify-between">
             <div>

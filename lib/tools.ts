@@ -159,20 +159,20 @@ export const toolDefinitions = [
   },
 ];
 
-function getOrderDetailsTool(args: { orderId: string }) {
-  const order = findOrderById(args.orderId);
+async function getOrderDetailsTool(args: { orderId: string }) {
+  const order = await findOrderById(args.orderId);
   if (!order) return { error: `No order found with ID ${args.orderId}` };
   return order;
 }
 
-function checkRefundEligibilityTool(args: { orderId: string }) {
-  const order = findOrderById(args.orderId);
+async function checkRefundEligibilityTool(args: { orderId: string }) {
+  const order = await findOrderById(args.orderId);
   if (!order) return { error: `No order found with ID ${args.orderId}` };
   return checkRefundEligibility(order);
 }
 
-function approveRefundTool(args: { orderId: string }) {
-  const order = findOrderById(args.orderId);
+async function approveRefundTool(args: { orderId: string }) {
+  const order = await findOrderById(args.orderId);
   if (!order) return { error: `No order found with ID ${args.orderId}` };
   const eligibility = checkRefundEligibility(order);
   if (!eligibility.eligible) {
@@ -192,15 +192,16 @@ function approveRefundTool(args: { orderId: string }) {
 function denyRefundTool(args: { orderId: string; reason: string }) {
   return { status: "denied", orderId: args.orderId, reason: args.reason };
 }
-
-export function executeTool(name: string, args: Record<string, unknown>) {
+export async function executeTool(name: string, args: Record<string, unknown>) {
   switch (name) {
     case "get_order_details":
-      return getOrderDetailsTool({ orderId: args.orderId as string });
+      return await getOrderDetailsTool({ orderId: args.orderId as string });
     case "check_refund_eligibility":
-      return checkRefundEligibilityTool({ orderId: args.orderId as string });
+      return await checkRefundEligibilityTool({
+        orderId: args.orderId as string,
+      });
     case "approve_refund":
-      return approveRefundTool({ orderId: args.orderId as string });
+      return await approveRefundTool({ orderId: args.orderId as string });
     case "deny_refund":
       return denyRefundTool({
         orderId: args.orderId as string,
