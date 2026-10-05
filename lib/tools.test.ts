@@ -1,3 +1,14 @@
+let mockOrders: unknown = null;
+
+jest.mock("./redis", () => ({
+  redis: {
+    get: jest.fn(async () => mockOrders),
+    set: jest.fn(async (_key: string, value: unknown) => {
+      mockOrders = value;
+    }),
+  },
+}));
+
 import { checkRefundEligibility, executeTool } from "./tools";
 import type { Order } from "./data";
 
@@ -22,36 +33,51 @@ function makeOrder(overrides: Partial<Order> = {}): Order {
 describe("checkRefundEligibility", () => {
   it("denies a refund if the order hasn't been delivered yet", () => {
     const result = checkRefundEligibility(makeOrder({ status: "shipped" }));
+
     expect(result.eligible).toBe(false);
     expect(result.reason).toMatch(/not been delivered/i);
   });
 
   it("denies a refund if the order was already refunded", () => {
     const result = checkRefundEligibility(makeOrder({ refunded: true }));
+
     expect(result.eligible).toBe(false);
     expect(result.reason).toMatch(/already been refunded/i);
   });
 
   it("denies a refund for final-sale items regardless of timing", () => {
     const result = checkRefundEligibility(
-      makeOrder({ category: "final_sale", deliveryDaysAgo: 0 }),
+      makeOrder({
+        category: "final_sale",
+        deliveryDaysAgo: 0,
+      }),
     );
+
     expect(result.eligible).toBe(false);
     expect(result.reason).toMatch(/final sale/i);
   });
 
   it("denies a refund for damage caused by the customer", () => {
     const result = checkRefundEligibility(
-      makeOrder({ condition: "damaged_by_customer", deliveryDaysAgo: 1 }),
+      makeOrder({
+        condition: "damaged_by_customer",
+        deliveryDaysAgo: 1,
+      }),
     );
+
     expect(result.eligible).toBe(false);
     expect(result.reason).toMatch(/damaged by the customer/i);
   });
 
   it("approves a defective item within the 14-day window, including shipping", () => {
     const result = checkRefundEligibility(
-      makeOrder({ condition: "defective", price: 500, deliveryDaysAgo: 14 }),
+      makeOrder({
+        condition: "defective",
+        price: 500,
+        deliveryDaysAgo: 14,
+      }),
     );
+
     expect(result).toMatchObject({
       eligible: true,
       refundAmount: 500,
@@ -61,8 +87,12 @@ describe("checkRefundEligibility", () => {
 
   it("denies a defective item once it's past the 14-day window", () => {
     const result = checkRefundEligibility(
-      makeOrder({ condition: "defective", deliveryDaysAgo: 15 }),
+      makeOrder({
+        condition: "defective",
+        deliveryDaysAgo: 15,
+      }),
     );
+
     expect(result.eligible).toBe(false);
     expect(result.reason).toMatch(/more than 14 days/i);
   });
@@ -75,6 +105,7 @@ describe("checkRefundEligibility", () => {
         deliveryDaysAgo: 1,
       }),
     );
+
     expect(result.eligible).toBe(false);
     expect(result.reason).toMatch(/already been accessed/i);
   });
@@ -88,6 +119,7 @@ describe("checkRefundEligibility", () => {
         price: 200,
       }),
     );
+
     expect(result).toMatchObject({
       eligible: true,
       refundAmount: 200,
@@ -103,14 +135,19 @@ describe("checkRefundEligibility", () => {
         deliveryDaysAgo: 6,
       }),
     );
+
     expect(result.eligible).toBe(false);
     expect(result.reason).toMatch(/more than 5 days/i);
   });
 
   it("approves a standard unused item within the 7-day window", () => {
     const result = checkRefundEligibility(
-      makeOrder({ deliveryDaysAgo: 7, price: 750 }),
+      makeOrder({
+        deliveryDaysAgo: 7,
+        price: 750,
+      }),
     );
+
     expect(result).toMatchObject({
       eligible: true,
       refundAmount: 750,
@@ -119,13 +156,22 @@ describe("checkRefundEligibility", () => {
   });
 
   it("denies a standard unused item once it's past the 7-day window", () => {
-    const result = checkRefundEligibility(makeOrder({ deliveryDaysAgo: 8 }));
+    const result = checkRefundEligibility(
+      makeOrder({
+        deliveryDaysAgo: 8,
+      }),
+    );
+
     expect(result.eligible).toBe(false);
     expect(result.reason).toMatch(/more than 7 days/i);
   });
 });
 
 describe("executeTool", () => {
+  beforeEach(() => {
+    mockOrders = null;
+  });
+
   it("returns order details for a known order", async () => {
     const result = (await executeTool("get_order_details", {
       orderId: "ORD-1001",
@@ -151,7 +197,9 @@ describe("executeTool", () => {
   it("returns eligible: true for the seeded defective-item order (ORD-1006)", async () => {
     const result = (await executeTool("check_refund_eligibility", {
       orderId: "ORD-1006",
-    })) as { eligible: boolean };
+    })) as {
+      eligible: boolean;
+    };
 
     expect(result.eligible).toBe(true);
   });
@@ -159,7 +207,9 @@ describe("executeTool", () => {
   it("returns eligible: false for the seeded final-sale order (ORD-1003)", async () => {
     const result = (await executeTool("check_refund_eligibility", {
       orderId: "ORD-1003",
-    })) as { eligible: boolean };
+    })) as {
+      eligible: boolean;
+    };
 
     expect(result.eligible).toBe(false);
   });
@@ -173,22 +223,20 @@ describe("executeTool", () => {
   });
 });
 
-beforeEach(() => {
-  jest.resetModules();
-});
-
-describe("executeTool: approve_refund / deny_refund (isolated)", () => {
+describe("executeTool: approve_refund / deny_refund", () => {
   beforeEach(() => {
     jest.resetModules();
+    mockOrders = null;
   });
 
   it("approves an eligible order and marks it refunded", async () => {
     const { executeTool: freshExecuteTool } = await import("./tools");
 
-    // ORD-1009: standard, unused, delivered 2 days ago -- eligible.
     const before = (await freshExecuteTool("get_order_details", {
       orderId: "ORD-1009",
-    })) as { refunded: boolean };
+    })) as {
+      refunded: boolean;
+    };
 
     expect(before.refunded).toBe(false);
 
@@ -209,7 +257,9 @@ describe("executeTool: approve_refund / deny_refund (isolated)", () => {
 
     const after = (await freshExecuteTool("get_order_details", {
       orderId: "ORD-1009",
-    })) as { refunded: boolean };
+    })) as {
+      refunded: boolean;
+    };
 
     expect(after.refunded).toBe(true);
   });
@@ -219,7 +269,9 @@ describe("executeTool: approve_refund / deny_refund (isolated)", () => {
 
     const result = (await freshExecuteTool("approve_refund", {
       orderId: "ORD-1003",
-    })) as { error: string };
+    })) as {
+      error: string;
+    };
 
     expect(result.error).toMatch(/not eligible/i);
   });
