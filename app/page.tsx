@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 type Customer = {
   customerId: string;
@@ -81,16 +82,30 @@ export default function ChatPage() {
     <main className="min-h-screen bg-paper flex justify-center px-4 py-10">
       <div className="w-full max-w-2xl flex flex-col h-[calc(100vh-5rem)]">
         {/* Header */}
+        {/* Header */}
         <div className="mb-6">
-          <p className="text-xs tracking-[0.2em] uppercase text-gold font-mono mb-1">
-            Refund Desk
-          </p>
-          <h1 className="font-display text-3xl text-ink">
-            AI Customer Support
-          </h1>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs tracking-[0.2em] uppercase text-gold font-mono mb-1">
+                Refund Desk
+              </p>
+              <h1 className="font-display text-3xl text-ink">
+                AI Customer Support
+              </h1>
+            </div>
+
+            <Link
+              href="/admin"
+              className="shrink-0 bg-white border border-line rounded-full px-4 py-2
+                         text-sm text-ink hover:border-gold hover:text-gold
+                         transition flex items-center gap-1.5"
+            >
+              <span className="font-mono text-xs">⌁</span>
+              Admin Dashboard
+            </Link>
+          </div>
           <div className="h-px bg-line mt-4" />
         </div>
-
         {/* Customer selector */}
         <div className="mb-5">
           <label className="text-xs uppercase tracking-wide text-ink-muted font-mono block mb-1.5">
